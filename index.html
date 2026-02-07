@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Journal - Firebase</title>
+    <title>Voice Journal - Audio Storage</title>
     <style>
         * {
             margin: 0;
@@ -77,6 +77,7 @@
             border: 1px solid #ddd;
             border-radius: 6px;
             font-size: 0.9em;
+            font-family: monospace;
         }
 
         .config-btn {
@@ -92,6 +93,15 @@
 
         .config-btn:hover {
             background: #764ba2;
+        }
+
+        .config-note {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.85em;
+            color: #666;
         }
 
         .record-section {
@@ -207,7 +217,7 @@
             color: #721c24;
         }
 
-        .transcript-box {
+        .audio-preview {
             margin-top: 20px;
             padding: 20px;
             background: #f8f9fa;
@@ -215,22 +225,26 @@
             border-left: 4px solid #667eea;
         }
 
-        .transcript-box h3 {
+        .audio-preview h3 {
             color: #667eea;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             font-size: 1.1em;
         }
 
-        .transcript-text {
-            color: #333;
-            line-height: 1.6;
-            white-space: pre-wrap;
+        .audio-player {
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .audio-info {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 15px;
         }
 
         .action-buttons {
             display: flex;
             gap: 10px;
-            margin-top: 15px;
             flex-wrap: wrap;
         }
 
@@ -274,6 +288,11 @@
             color: #1976D2;
             font-size: 0.9em;
             line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .info-box strong {
+            color: #0d47a1;
         }
 
         .entries-section {
@@ -293,7 +312,12 @@
             color: #667eea;
         }
 
-        .refresh-btn {
+        .header-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .refresh-btn, .download-all-btn {
             padding: 8px 15px;
             background: #6c757d;
             color: white;
@@ -303,8 +327,16 @@
             font-size: 0.9em;
         }
 
-        .refresh-btn:hover {
+        .refresh-btn:hover, .download-all-btn:hover {
             background: #5a6268;
+        }
+
+        .download-all-btn {
+            background: #28a745;
+        }
+
+        .download-all-btn:hover {
+            background: #218838;
         }
 
         .entry-list {
@@ -330,13 +362,10 @@
             margin-bottom: 5px;
         }
 
-        .entry-preview {
+        .entry-meta {
             color: #666;
-            font-size: 0.9em;
-            margin-bottom: 8px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 0.85em;
+            margin-bottom: 10px;
         }
 
         .entry-actions {
@@ -356,6 +385,14 @@
 
         .entry-btn:hover {
             background: #764ba2;
+        }
+
+        .entry-btn.play {
+            background: #28a745;
+        }
+
+        .entry-btn.play:hover {
+            background: #218838;
         }
 
         .entry-btn.delete {
@@ -381,7 +418,7 @@
     <div class="container">
         <div class="header">
             <h1>🎙️ Voice Journal</h1>
-            <p>Record your thoughts - saved to Firebase</p>
+            <p>Record audio - Process with Claude later</p>
         </div>
 
         <!-- Firebase Configuration -->
@@ -393,6 +430,9 @@
             <input type="text" id="projectId" class="config-input" placeholder="Project ID">
             <input type="text" id="storageBucket" class="config-input" placeholder="Storage Bucket (e.g., your-app.appspot.com)">
             <button id="saveConfigBtn" class="config-btn">💾 Save Configuration</button>
+            <div class="config-note">
+                <strong>Note:</strong> Your credentials are stored locally in your browser. They won't be visible to others.
+            </div>
         </div>
 
         <div id="mainApp" class="hidden">
@@ -414,17 +454,22 @@
 
                 <div id="status" class="status" style="display: none;"></div>
 
-                <div id="transcriptBox" class="transcript-box" style="display: none;">
-                    <h3>Transcript</h3>
-                    <div id="transcriptText" class="transcript-text"></div>
+                <div id="audioPreview" class="audio-preview" style="display: none;">
+                    <h3>🎵 Audio Ready</h3>
+                    <audio id="audioPlayer" class="audio-player" controls></audio>
+                    <div id="audioInfo" class="audio-info"></div>
                     <div class="action-buttons">
                         <button id="saveToFirebaseBtn" class="btn">☁️ Save to Firebase</button>
-                        <button id="downloadBtn" class="btn secondary">💾 Download Local</button>
+                        <button id="downloadLocalBtn" class="btn secondary">💾 Download Local</button>
                     </div>
                 </div>
 
                 <div class="info-box">
-                    <p><strong>How it works:</strong> Record or upload audio → Get transcription → Save to Firebase cloud (automatic backup) or download locally</p>
+                    <p><strong>How it works:</strong></p>
+                    <p>1. Record or upload audio on any device</p>
+                    <p>2. Audio files saved to Firebase cloud with timestamp</p>
+                    <p>3. Download all your recordings anytime</p>
+                    <p>4. Upload to Claude for transcription + AI analysis</p>
                 </div>
             </div>
 
@@ -432,8 +477,11 @@
             <div class="card">
                 <div class="entries-section">
                     <div class="entries-header">
-                        <h3>📚 Your Journal Entries</h3>
-                        <button id="refreshEntriesBtn" class="refresh-btn">🔄 Refresh</button>
+                        <h3>🎵 Your Audio Journal</h3>
+                        <div class="header-buttons">
+                            <button id="downloadAllBtn" class="download-all-btn">📦 Download All</button>
+                            <button id="refreshEntriesBtn" class="refresh-btn">🔄 Refresh</button>
+                        </div>
                     </div>
                     <div id="entriesList" class="entry-list">
                         <p style="text-align: center; color: #999;">Loading entries...</p>
@@ -453,7 +501,6 @@
         let startTime;
         let timerInterval;
         let recordedBlob;
-        let currentTranscript = '';
         let currentDuration = 0;
         let firebaseApp;
         let storage;
@@ -463,13 +510,15 @@
         const recordBtn = document.getElementById('recordBtn');
         const timer = document.getElementById('timer');
         const status = document.getElementById('status');
-        const transcriptBox = document.getElementById('transcriptBox');
-        const transcriptText = document.getElementById('transcriptText');
+        const audioPreview = document.getElementById('audioPreview');
+        const audioPlayer = document.getElementById('audioPlayer');
+        const audioInfo = document.getElementById('audioInfo');
         const saveToFirebaseBtn = document.getElementById('saveToFirebaseBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadLocalBtn = document.getElementById('downloadLocalBtn');
         const audioUpload = document.getElementById('audioUpload');
         const saveConfigBtn = document.getElementById('saveConfigBtn');
         const refreshEntriesBtn = document.getElementById('refreshEntriesBtn');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
         const entriesList = document.getElementById('entriesList');
 
         // Check if Firebase is already configured
@@ -542,7 +591,7 @@
                 mediaRecorder.onstop = async () => {
                     recordedBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     stream.getTracks().forEach(track => track.stop());
-                    await processAudio(recordedBlob);
+                    displayAudioPreview(recordedBlob);
                 };
 
                 mediaRecorder.start();
@@ -556,7 +605,7 @@
                 timerInterval = setInterval(updateTimer, 1000);
 
                 hideStatus();
-                transcriptBox.style.display = 'none';
+                audioPreview.style.display = 'none';
             } catch (error) {
                 showStatus('Microphone access denied. Please enable microphone permissions or use file upload.', 'error');
             }
@@ -587,77 +636,41 @@
             const file = event.target.files[0];
             if (file) {
                 timer.style.display = 'none';
+                recordedBlob = file;
+                
+                // Get duration from file
                 const audio = new Audio();
                 audio.src = URL.createObjectURL(file);
                 audio.addEventListener('loadedmetadata', async () => {
                     currentDuration = Math.floor(audio.duration);
-                    await processAudio(file);
+                    displayAudioPreview(file);
                 });
             }
         });
 
-        // Process audio (transcribe)
-        async function processAudio(audioBlob) {
-            showStatus('Transcribing audio...', 'processing');
+        // Display audio preview
+        function displayAudioPreview(audioBlob) {
+            const url = URL.createObjectURL(audioBlob);
+            audioPlayer.src = url;
             
-            try {
-                const transcript = await transcribeAudio(audioBlob);
-                
-                if (transcript) {
-                    currentTranscript = transcript;
-                    transcriptText.textContent = transcript;
-                    transcriptBox.style.display = 'block';
-                    showStatus('Transcription complete! Choose save option.', 'success');
-                } else {
-                    showStatus('Could not transcribe audio. Speech may not be clear or supported.', 'error');
-                }
-            } catch (error) {
-                showStatus('Transcription failed: ' + error.message, 'error');
-            }
-        }
-
-        // Transcribe audio using Web Speech API
-        function transcribeAudio(audioBlob) {
-            return new Promise((resolve, reject) => {
-                const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-                recognition.lang = 'en-US';
-                recognition.continuous = true;
-                recognition.interimResults = false;
-
-                let finalTranscript = '';
-
-                recognition.onresult = (event) => {
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
-                        if (event.results[i].isFinal) {
-                            finalTranscript += event.results[i][0].transcript + ' ';
-                        }
-                    }
-                };
-
-                recognition.onerror = (event) => {
-                    reject(new Error(event.error));
-                };
-
-                recognition.onend = () => {
-                    resolve(finalTranscript.trim());
-                };
-
-                const audio = new Audio();
-                audio.src = URL.createObjectURL(audioBlob);
-                
-                recognition.start();
-                audio.play();
-                
-                audio.onended = () => {
-                    setTimeout(() => recognition.stop(), 1000);
-                };
-            });
+            const minutes = Math.floor(currentDuration / 60);
+            const seconds = currentDuration % 60;
+            const sizeKB = (audioBlob.size / 1024).toFixed(2);
+            
+            audioInfo.innerHTML = `
+                <strong>Duration:</strong> ${minutes}m ${seconds}s<br>
+                <strong>Size:</strong> ${sizeKB} KB<br>
+                <strong>Format:</strong> ${audioBlob.type || 'audio/webm'}
+            `;
+            
+            audioPreview.style.display = 'block';
+            showStatus('Audio ready! Choose save option.', 'success');
         }
 
         // Save to Firebase
         saveToFirebaseBtn.addEventListener('click', async () => {
-            if (!currentTranscript) {
-                showStatus('No transcript to save', 'error');
+            if (!recordedBlob) {
+                showStatus('No audio to save', 'error');
                 return;
             }
 
@@ -666,46 +679,45 @@
             try {
                 const now = new Date();
                 const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
-                const filename = `journal_${timestamp}.txt`;
+                const filename = `journal_${timestamp}.webm`;
                 
-                const minutes = Math.floor(currentDuration / 60);
-                const seconds = currentDuration % 60;
-                const durationStr = `${minutes}m ${seconds}s`;
-                
-                const content = `Date: ${now.toLocaleString()}
-Duration: ${durationStr}
+                const metadata = {
+                    contentType: recordedBlob.type || 'audio/webm',
+                    customMetadata: {
+                        'recordedAt': now.toISOString(),
+                        'duration': currentDuration.toString(),
+                        'size': recordedBlob.size.toString()
+                    }
+                };
 
-${currentTranscript}`;
-
-                const blob = new Blob([content], { type: 'text/plain' });
                 const storageRef = storage.ref(`journals/${filename}`);
+                await storageRef.put(recordedBlob, metadata);
                 
-                await storageRef.put(blob);
-                
-                showStatus('✅ Saved to Firebase! Entry uploaded successfully.', 'success');
+                showStatus('✅ Saved to Firebase! Audio uploaded successfully.', 'success');
                 loadEntries();
+                
+                // Clear preview
+                setTimeout(() => {
+                    audioPreview.style.display = 'none';
+                    recordedBlob = null;
+                }, 2000);
             } catch (error) {
                 showStatus('Firebase upload failed: ' + error.message, 'error');
             }
         });
 
         // Download locally
-        downloadBtn.addEventListener('click', () => {
+        downloadLocalBtn.addEventListener('click', () => {
+            if (!recordedBlob) {
+                showStatus('No audio to download', 'error');
+                return;
+            }
+
             const now = new Date();
             const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const filename = `journal_${timestamp}.txt`;
+            const filename = `journal_${timestamp}.webm`;
             
-            const minutes = Math.floor(currentDuration / 60);
-            const seconds = currentDuration % 60;
-            const durationStr = `${minutes}m ${seconds}s`;
-            
-            const content = `Date: ${now.toLocaleString()}
-Duration: ${durationStr}
-
-${currentTranscript}`;
-
-            const blob = new Blob([content], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
+            const url = URL.createObjectURL(recordedBlob);
             const a = document.createElement('a');
             a.href = url;
             a.download = filename;
@@ -714,7 +726,7 @@ ${currentTranscript}`;
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            showStatus('File downloaded to your device!', 'success');
+            showStatus('Audio downloaded to your device!', 'success');
         });
 
         // Load entries from Firebase
@@ -738,23 +750,26 @@ ${currentTranscript}`;
                 for (const item of items) {
                     const url = await item.getDownloadURL();
                     const metadata = await item.getMetadata();
-                    const response = await fetch(url);
-                    const text = await response.text();
                     
-                    // Extract date from content
-                    const dateMatch = text.match(/Date: (.+)/);
-                    const date = dateMatch ? dateMatch[1] : 'Unknown date';
+                    const recordedAt = metadata.customMetadata?.recordedAt || metadata.timeCreated;
+                    const duration = metadata.customMetadata?.duration || '?';
+                    const size = metadata.size ? (metadata.size / 1024).toFixed(2) : '?';
                     
-                    // Get preview (first 100 chars after metadata)
-                    const contentStart = text.indexOf('\n\n') + 2;
-                    const preview = text.substring(contentStart, contentStart + 100) + '...';
+                    const date = new Date(recordedAt);
+                    const dateStr = date.toLocaleString();
+                    
+                    const durationMin = Math.floor(duration / 60);
+                    const durationSec = duration % 60;
                     
                     const entryDiv = document.createElement('div');
                     entryDiv.className = 'entry-item';
                     entryDiv.innerHTML = `
-                        <div class="entry-date">${date}</div>
-                        <div class="entry-preview">${preview}</div>
+                        <div class="entry-date">📅 ${dateStr}</div>
+                        <div class="entry-meta">
+                            ⏱️ ${durationMin}m ${durationSec}s | 💾 ${size} KB
+                        </div>
                         <div class="entry-actions">
+                            <button class="entry-btn play play-entry" data-url="${url}">▶️ Play</button>
                             <button class="entry-btn download-entry" data-url="${url}" data-name="${item.name}">📥 Download</button>
                             <button class="entry-btn delete delete-entry" data-path="${item.fullPath}">🗑️ Delete</button>
                         </div>
@@ -764,6 +779,14 @@ ${currentTranscript}`;
                 }
 
                 // Add event listeners
+                document.querySelectorAll('.play-entry').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const url = e.target.getAttribute('data-url');
+                        const audio = new Audio(url);
+                        audio.play();
+                    });
+                });
+
                 document.querySelectorAll('.download-entry').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const url = e.target.getAttribute('data-url');
@@ -795,6 +818,42 @@ ${currentTranscript}`;
             }
         }
 
+        // Download all entries
+        downloadAllBtn.addEventListener('click', async () => {
+            if (!storage) return;
+
+            try {
+                showStatus('Preparing download...', 'processing');
+                
+                const listRef = storage.ref('journals');
+                const result = await listRef.listAll();
+                
+                if (result.items.length === 0) {
+                    showStatus('No entries to download', 'error');
+                    return;
+                }
+
+                showStatus(`Downloading ${result.items.length} files...`, 'processing');
+
+                for (const item of result.items) {
+                    const url = await item.getDownloadURL();
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = item.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    
+                    // Small delay between downloads
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
+                showStatus(`✅ Downloaded ${result.items.length} audio files!`, 'success');
+            } catch (error) {
+                showStatus('Download failed: ' + error.message, 'error');
+            }
+        });
+
         // Refresh entries
         refreshEntriesBtn.addEventListener('click', loadEntries);
 
@@ -809,11 +868,7 @@ ${currentTranscript}`;
         function hideStatus() {
             status.style.display = 'none';
         }
-
-        // Check for Speech Recognition support
-        if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
-            showStatus('Speech recognition not supported in this browser. Please use Chrome or Edge.', 'error');
-        }
     </script>
 </body>
 </html>
+
