@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Journal - Firebase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1em;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .config-section {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .config-section h3 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+
+        .config-section.configured {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .config-section.configured h3 {
+            color: #155724;
+        }
+
+        .config-input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+
+        .config-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .config-btn:hover {
+            background: #764ba2;
+        }
+
+        .record-section {
+            text-align: center;
+        }
+
+        .record-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .record-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 7px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .record-btn:active {
+            transform: scale(0.95);
+        }
+
+        .record-btn.recording {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .record-icon {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+        }
+
+        .record-text {
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .timer {
+            font-size: 1.5em;
+            color: #667eea;
+            margin: 15px 0;
+            font-weight: 600;
+        }
+
+        .upload-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .upload-label {
+            display: block;
+            padding: 15px 25px;
+            background: #f8f9fa;
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .upload-label:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .upload-input {
+            display: none;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status.processing {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .transcript-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        .transcript-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .transcript-text {
+            color: #333;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .info-box p {
+            color: #1976D2;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
+        .entries-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .entries-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .entries-header h3 {
+            color: #667eea;
+        }
+
+        .refresh-btn {
+            padding: 8px 15px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .refresh-btn:hover {
+            background: #5a6268;
+        }
+
+        .entry-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .entry-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 3px solid #667eea;
+        }
+
+        .entry-item:hover {
+            background: #e9ecef;
+        }
+
+        .entry-date {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .entry-preview {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .entry-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .entry-btn {
+            padding: 6px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        .entry-btn:hover {
+            background: #764ba2;
+        }
+
+        .entry-btn.delete {
+            background: #dc3545;
+        }
+
+        .entry-btn.delete:hover {
+            background: #c82333;
+        }
+
+        .disabled {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+            pointer-events: none;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎙️ Voice Journal</h1>
+            <p>Record your thoughts - saved to Firebase</p>
+        </div>
+
+        <!-- Firebase Configuration -->
+        <div id="configSection" class="config-section">
+            <h3>⚙️ Firebase Configuration Required</h3>
+            <p style="margin-bottom: 15px; color: #856404;">Enter your Firebase credentials below (one-time setup):</p>
+            <input type="text" id="apiKey" class="config-input" placeholder="API Key">
+            <input type="text" id="authDomain" class="config-input" placeholder="Auth Domain (e.g., your-app.firebaseapp.com)">
+            <input type="text" id="projectId" class="config-input" placeholder="Project ID">
+            <input type="text" id="storageBucket" class="config-input" placeholder="Storage Bucket (e.g., your-app.appspot.com)">
+            <button id="saveConfigBtn" class="config-btn">💾 Save Configuration</button>
+        </div>
+
+        <div id="mainApp" class="hidden">
+            <div class="card">
+                <div class="record-section">
+                    <button id="recordBtn" class="record-btn">
+                        <div class="record-icon">⏺</div>
+                        <div class="record-text">TAP TO RECORD</div>
+                    </button>
+                    <div id="timer" class="timer" style="display: none;">00:00</div>
+                </div>
+
+                <div class="upload-section">
+                    <label for="audioUpload" class="upload-label">
+                        📁 Or Upload Audio File
+                    </label>
+                    <input type="file" id="audioUpload" class="upload-input" accept="audio/*">
+                </div>
+
+                <div id="status" class="status" style="display: none;"></div>
+
+                <div id="transcriptBox" class="transcript-box" style="display: none;">
+                    <h3>Transcript</h3>
+                    <div id="transcriptText" class="transcript-text"></div>
+                    <div class="action-buttons">
+                        <button id="saveToFirebaseBtn" class="btn">☁️ Save to Firebase</button>
+                        <button id="downloadBtn" class="btn secondary">💾 Download Local</button>
+                    </div>
+                </div>
+
+                <div class="info-box">
+                    <p><strong>How it works:</strong> Record or upload audio → Get transcription → Save to Firebase cloud (automatic backup) or download locally</p>
+                </div>
+            </div>
+
+            <!-- Saved Entries List -->
+            <div class="card">
+                <div class="entries-section">
+                    <div class="entries-header">
+                        <h3>📚 Your Journal Entries</h3>
+                        <button id="refreshEntriesBtn" class="refresh-btn">🔄 Refresh</button>
+                    </div>
+                    <div id="entriesList" class="entry-list">
+                        <p style="text-align: center; color: #999;">Loading entries...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let startTime;
+        let timerInterval;
+        let recordedBlob;
+        let currentTranscript = '';
+        let currentDuration = 0;
+        let firebaseApp;
+        let storage;
+
+        const configSection = document.getElementById('configSection');
+        const mainApp = document.getElementById('mainApp');
+        const recordBtn = document.getElementById('recordBtn');
+        const timer = document.getElementById('timer');
+        const status = document.getElementById('status');
+        const transcriptBox = document.getElementById('transcriptBox');
+        const transcriptText = document.getElementById('transcriptText');
+        const saveToFirebaseBtn = document.getElementById('saveToFirebaseBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const audioUpload = document.getElementById('audioUpload');
+        const saveConfigBtn = document.getElementById('saveConfigBtn');
+        const refreshEntriesBtn = document.getElementById('refreshEntriesBtn');
+        const entriesList = document.getElementById('entriesList');
+
+        // Check if Firebase is already configured
+        window.addEventListener('load', () => {
+            const savedConfig = localStorage.getItem('firebaseConfig');
+            if (savedConfig) {
+                const config = JSON.parse(savedConfig);
+                initializeFirebase(config);
+                showMainApp();
+            }
+        });
+
+        // Save Firebase configuration
+        saveConfigBtn.addEventListener('click', () => {
+            const config = {
+                apiKey: document.getElementById('apiKey').value.trim(),
+                authDomain: document.getElementById('authDomain').value.trim(),
+                projectId: document.getElementById('projectId').value.trim(),
+                storageBucket: document.getElementById('storageBucket').value.trim()
+            };
+
+            if (!config.apiKey || !config.authDomain || !config.projectId || !config.storageBucket) {
+                alert('Please fill in all Firebase configuration fields');
+                return;
+            }
+
+            localStorage.setItem('firebaseConfig', JSON.stringify(config));
+            initializeFirebase(config);
+            showMainApp();
+        });
+
+        function initializeFirebase(config) {
+            try {
+                firebaseApp = firebase.initializeApp(config);
+                storage = firebase.storage();
+                configSection.classList.add('configured');
+                configSection.querySelector('h3').textContent = '✅ Firebase Connected';
+                loadEntries();
+            } catch (error) {
+                alert('Firebase initialization failed: ' + error.message);
+                localStorage.removeItem('firebaseConfig');
+            }
+        }
+
+        function showMainApp() {
+            configSection.classList.add('hidden');
+            mainApp.classList.remove('hidden');
+        }
+
+        // Record button click
+        recordBtn.addEventListener('click', async () => {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                await startRecording();
+            } else {
+                stopRecording();
+            }
+        });
+
+        // Start recording
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    recordedBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    stream.getTracks().forEach(track => track.stop());
+                    await processAudio(recordedBlob);
+                };
+
+                mediaRecorder.start();
+                recordBtn.classList.add('recording');
+                recordBtn.querySelector('.record-icon').textContent = '⏹';
+                recordBtn.querySelector('.record-text').textContent = 'TAP TO STOP';
+                
+                startTime = Date.now();
+                timer.style.display = 'block';
+                updateTimer();
+                timerInterval = setInterval(updateTimer, 1000);
+
+                hideStatus();
+                transcriptBox.style.display = 'none';
+            } catch (error) {
+                showStatus('Microphone access denied. Please enable microphone permissions or use file upload.', 'error');
+            }
+        }
+
+        // Stop recording
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                recordBtn.classList.remove('recording');
+                recordBtn.querySelector('.record-icon').textContent = '⏺';
+                recordBtn.querySelector('.record-text').textContent = 'TAP TO RECORD';
+                clearInterval(timerInterval);
+                currentDuration = Math.floor((Date.now() - startTime) / 1000);
+            }
+        }
+
+        // Update timer display
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const seconds = (elapsed % 60).toString().padStart(2, '0');
+            timer.textContent = `${minutes}:${seconds}`;
+        }
+
+        // Handle file upload
+        audioUpload.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                timer.style.display = 'none';
+                const audio = new Audio();
+                audio.src = URL.createObjectURL(file);
+                audio.addEventListener('loadedmetadata', async () => {
+                    currentDuration = Math.floor(audio.duration);
+                    await processAudio(file);
+                });
+            }
+        });
+
+        // Process audio (transcribe)
+        async function processAudio(audioBlob) {
+            showStatus('Transcribing audio...', 'processing');
+            
+            try {
+                const transcript = await transcribeAudio(audioBlob);
+                
+                if (transcript) {
+                    currentTranscript = transcript;
+                    transcriptText.textContent = transcript;
+                    transcriptBox.style.display = 'block';
+                    showStatus('Transcription complete! Choose save option.', 'success');
+                } else {
+                    showStatus('Could not transcribe audio. Speech may not be clear or supported.', 'error');
+                }
+            } catch (error) {
+                showStatus('Transcription failed: ' + error.message, 'error');
+            }
+        }
+
+        // Transcribe audio using Web Speech API
+        function transcribeAudio(audioBlob) {
+            return new Promise((resolve, reject) => {
+                const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.lang = 'en-US';
+                recognition.continuous = true;
+                recognition.interimResults = false;
+
+                let finalTranscript = '';
+
+                recognition.onresult = (event) => {
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript + ' ';
+                        }
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    reject(new Error(event.error));
+                };
+
+                recognition.onend = () => {
+                    resolve(finalTranscript.trim());
+                };
+
+                const audio = new Audio();
+                audio.src = URL.createObjectURL(audioBlob);
+                
+                recognition.start();
+                audio.play();
+                
+                audio.onended = () => {
+                    setTimeout(() => recognition.stop(), 1000);
+                };
+            });
+        }
+
+        // Save to Firebase
+        saveToFirebaseBtn.addEventListener('click', async () => {
+            if (!currentTranscript) {
+                showStatus('No transcript to save', 'error');
+                return;
+            }
+
+            showStatus('Uploading to Firebase...', 'processing');
+
+            try {
+                const now = new Date();
+                const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                const filename = `journal_${timestamp}.txt`;
+                
+                const minutes = Math.floor(currentDuration / 60);
+                const seconds = currentDuration % 60;
+                const durationStr = `${minutes}m ${seconds}s`;
+                
+                const content = `Date: ${now.toLocaleString()}
+Duration: ${durationStr}
+
+${currentTranscript}`;
+
+                const blob = new Blob([content], { type: 'text/plain' });
+                const storageRef = storage.ref(`journals/${filename}`);
+                
+                await storageRef.put(blob);
+                
+                showStatus('✅ Saved to Firebase! Entry uploaded successfully.', 'success');
+                loadEntries();
+            } catch (error) {
+                showStatus('Firebase upload failed: ' + error.message, 'error');
+            }
+        });
+
+        // Download locally
+        downloadBtn.addEventListener('click', () => {
+            const now = new Date();
+            const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `journal_${timestamp}.txt`;
+            
+            const minutes = Math.floor(currentDuration / 60);
+            const seconds = currentDuration % 60;
+            const durationStr = `${minutes}m ${seconds}s`;
+            
+            const content = `Date: ${now.toLocaleString()}
+Duration: ${durationStr}
+
+${currentTranscript}`;
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showStatus('File downloaded to your device!', 'success');
+        });
+
+        // Load entries from Firebase
+        async function loadEntries() {
+            if (!storage) return;
+
+            try {
+                const listRef = storage.ref('journals');
+                const result = await listRef.listAll();
+                
+                if (result.items.length === 0) {
+                    entriesList.innerHTML = '<p style="text-align: center; color: #999;">No entries yet. Start recording!</p>';
+                    return;
+                }
+
+                // Sort by name (timestamp) descending
+                const items = result.items.sort((a, b) => b.name.localeCompare(a.name));
+                
+                entriesList.innerHTML = '';
+                
+                for (const item of items) {
+                    const url = await item.getDownloadURL();
+                    const metadata = await item.getMetadata();
+                    const response = await fetch(url);
+                    const text = await response.text();
+                    
+                    // Extract date from content
+                    const dateMatch = text.match(/Date: (.+)/);
+                    const date = dateMatch ? dateMatch[1] : 'Unknown date';
+                    
+                    // Get preview (first 100 chars after metadata)
+                    const contentStart = text.indexOf('\n\n') + 2;
+                    const preview = text.substring(contentStart, contentStart + 100) + '...';
+                    
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'entry-item';
+                    entryDiv.innerHTML = `
+                        <div class="entry-date">${date}</div>
+                        <div class="entry-preview">${preview}</div>
+                        <div class="entry-actions">
+                            <button class="entry-btn download-entry" data-url="${url}" data-name="${item.name}">📥 Download</button>
+                            <button class="entry-btn delete delete-entry" data-path="${item.fullPath}">🗑️ Delete</button>
+                        </div>
+                    `;
+                    
+                    entriesList.appendChild(entryDiv);
+                }
+
+                // Add event listeners
+                document.querySelectorAll('.download-entry').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const url = e.target.getAttribute('data-url');
+                        const name = e.target.getAttribute('data-name');
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = name;
+                        a.click();
+                    });
+                });
+
+                document.querySelectorAll('.delete-entry').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        if (!confirm('Are you sure you want to delete this entry?')) return;
+                        
+                        const path = e.target.getAttribute('data-path');
+                        try {
+                            await storage.ref(path).delete();
+                            showStatus('Entry deleted', 'success');
+                            loadEntries();
+                        } catch (error) {
+                            showStatus('Delete failed: ' + error.message, 'error');
+                        }
+                    });
+                });
+
+            } catch (error) {
+                entriesList.innerHTML = `<p style="text-align: center; color: #dc3545;">Error loading entries: ${error.message}</p>`;
+            }
+        }
+
+        // Refresh entries
+        refreshEntriesBtn.addEventListener('click', loadEntries);
+
+        // Show status message
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = 'status ' + type;
+            status.style.display = 'block';
+        }
+
+        // Hide status message
+        function hideStatus() {
+            status.style.display = 'none';
+        }
+
+        // Check for Speech Recognition support
+        if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+            showStatus('Speech recognition not supported in this browser. Please use Chrome or Edge.', 'error');
+        }
+    </script>
+</body>
+</html>
