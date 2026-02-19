@@ -945,43 +945,59 @@
             btn.textContent = '⏳ Transcribing...';
             btn.disabled = true;
 
+            const openaiKey = localStorage.getItem('openaiApiKey');
+
             try {
                 // Fetch audio blob from Firebase
-                const response = await fetch(audioUrl);
-                if (!response.ok) throw new Error('Failed to fetch audio');
-                const audioBlob = await response.blob();
+                let audioBlob;
+                try {
+                    const response = await fetch(audioUrl);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    audioBlob = await response.blob();
+                } catch (e) {
+                    throw new Error('Could not download audio from Firebase: ' + e.message);
+                }
+
                 const ext = audioName.split('.').pop();
                 const file = new File([audioBlob], audioName, { type: audioBlob.type || `audio/${ext}` });
-
                 const formData = new FormData();
                 formData.append('file', file);
 
                 let transcriptText;
-                const openaiKey = localStorage.getItem('openaiApiKey');
 
                 if (openaiKey) {
                     // Use OpenAI Whisper API
                     formData.append('model', 'whisper-1');
-                    const whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${openaiKey}` },
-                        body: formData
-                    });
+                    let whisperResponse;
+                    try {
+                        whisperResponse = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${openaiKey}` },
+                            body: formData
+                        });
+                    } catch (e) {
+                        throw new Error('Could not reach OpenAI API. Check your internet connection.');
+                    }
                     if (!whisperResponse.ok) {
                         const err = await whisperResponse.json();
-                        throw new Error(err.error?.message || 'OpenAI transcription failed');
+                        throw new Error('OpenAI error: ' + (err.error?.message || whisperResponse.status));
                     }
                     const result = await whisperResponse.json();
                     transcriptText = result.text;
                 } else {
                     // Fall back to local server
-                    const whisperResponse = await fetch('http://localhost:5000/transcribe', {
-                        method: 'POST',
-                        body: formData
-                    });
+                    let whisperResponse;
+                    try {
+                        whisperResponse = await fetch('http://localhost:5000/transcribe', {
+                            method: 'POST',
+                            body: formData
+                        });
+                    } catch (e) {
+                        throw new Error('Cannot reach local server. Is server.py running on port 5000?');
+                    }
                     if (!whisperResponse.ok) {
                         const err = await whisperResponse.json();
-                        throw new Error(err.error || 'Transcription failed');
+                        throw new Error('Server error: ' + (err.error || whisperResponse.status));
                     }
                     const result = await whisperResponse.json();
                     transcriptText = result.text;
@@ -998,11 +1014,7 @@
             } catch (error) {
                 btn.textContent = originalText;
                 btn.disabled = false;
-                if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
-                    showStatus('Cannot reach Whisper server. Add an OpenAI key above or run server.py locally.', 'error');
-                } else {
-                    showStatus('Transcription failed: ' + error.message, 'error');
-                }
+                showStatus('Transcription failed: ' + error.message, 'error');
             }
         }
 
