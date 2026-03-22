@@ -651,7 +651,7 @@
         async function startRecording() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder = new MediaRecorder(stream, { audioBitsPerSecond: 32000 });
                 audioChunks = [];
 
                 mediaRecorder.ondataavailable = (event) => {
@@ -960,6 +960,11 @@
 
                 const ext = audioName.split('.').pop();
                 const file = new File([audioBlob], audioName, { type: audioBlob.type || `audio/${ext}` });
+
+                if (openaiKey && file.size > 25 * 1024 * 1024) {
+                    throw new Error(`File is ${(file.size / 1024 / 1024).toFixed(1)} MB — OpenAI limit is 25 MB. Use the local server instead, or re-record at a shorter duration.`);
+                }
+
                 const formData = new FormData();
                 formData.append('file', file);
 
